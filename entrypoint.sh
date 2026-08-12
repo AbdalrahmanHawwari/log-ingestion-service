@@ -2,7 +2,7 @@
 set -e
 
 echo "Running database migrations..."
-npx drizzle-kit push --config=drizzle.config.ts || true
+npx drizzle-kit push:pg
 
 echo "Starting application..."
 exec "$@"
