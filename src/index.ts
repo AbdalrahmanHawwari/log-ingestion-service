@@ -25,12 +25,13 @@ app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
 
-const shutdown = () => {
-  console.log("Shutting down gracefully...");
-  server.close(() => {
-    pool.end();
+const shutdown = async () => {
+  try {
+    await pool.end();
+  } catch (err) {
+  } finally {
     process.exit(0);
-  });
+  }
 };
 
 process.on("SIGTERM", shutdown);
