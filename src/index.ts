@@ -24,3 +24,14 @@ app.use("/", logRoutes);
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
+
+const shutdown = () => {
+  console.log("Shutting down gracefully...");
+  server.close(() => {
+    pool.end();
+    process.exit(0);
+  });
+};
+
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
