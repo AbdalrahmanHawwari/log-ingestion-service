@@ -3,7 +3,6 @@ version: "3.8"
 services:
   db:
     image: postgres:16-alpine
-    container_name: log_db
     environment:
       POSTGRES_USER: Abdalrahman
       POSTGRES_PASSWORD: postgres
@@ -24,7 +23,6 @@ services:
 
   app:
     build: .
-    container_name: log_app
     ports:
       - "8080:8080"
     environment:
