@@ -20,7 +20,7 @@ services:
       interval: 3s
       timeout: 3s
       retries: 5
-      stop_grace_period: 2s
+    stop_grace_period: 2s
 
   app:
     build: .
@@ -50,4 +50,4 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      stop_grace_period: 2s
+    stop_grace_period: 2s
