@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import { batchIngestSchema } from "../validations/logSchema";
 import { LogService } from "../services/logService";
 
 export class LogController {

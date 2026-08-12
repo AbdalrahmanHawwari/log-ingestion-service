@@ -32,7 +32,7 @@ export interface GetLogsResult {
 export interface AggregateQueryParams {
   since?: string;
   until?: string;
-  step?: string;
+  bucket?: string; // تم إضافة bucket هنا
   group_by?: string;
   service?: string;
   level?: string;
@@ -142,7 +142,6 @@ export class LogService {
     const values: any[] = [];
     let paramIndex = 1;
 
-    // since & until mandatory
     whereClauses.push(`timestamp >= $${paramIndex++}`);
     values.push(params.since);
 
