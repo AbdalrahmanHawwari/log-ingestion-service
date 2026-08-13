@@ -1,0 +1,88 @@
+{
+  "id": "90d82435-1114-4658-8866-76b81d245434",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "5",
+  "dialect": "pg",
+  "tables": {
+    "logs": {
+      "name": "logs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "timestamp": {
+          "name": "timestamp",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "level": {
+          "name": "level",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "service": {
+          "name": "service",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "message": {
+          "name": "message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attributes": {
+          "name": "attributes",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "idx_logs_timestamp_service": {
+          "name": "idx_logs_timestamp_service",
+          "columns": [
+            "\"logs\".\"timestamp\" desc",
+            "service"
+          ],
+          "isUnique": false
+        },
+        "idx_logs_timestamp_level": {
+          "name": "idx_logs_timestamp_level",
+          "columns": [
+            "\"logs\".\"timestamp\" desc",
+            "level"
+          ],
+          "isUnique": false
+        },
+        "idx_logs_composite": {
+          "name": "idx_logs_composite",
+          "columns": [
+            "\"logs\".\"timestamp\" desc",
+            "service",
+            "level"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

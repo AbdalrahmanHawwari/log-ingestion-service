@@ -16,12 +16,18 @@ export const singleLogSchema = z.object({
     ),
 
   level: z.enum(["debug", "info", "warn", "error"], {
-    errorMap: (issue) => ({
-      message: `invalid level: '${issue.path.join(".")}'`,
-    }),
+    errorMap: (issue, ctx) => {
+      if (issue.code === z.ZodIssueCode.invalid_enum_value) {
+        return { message: `invalid level: '${ctx.data}'` };
+      }
+      return { message: issue.message || "Invalid enum value" };
+    },
   }),
 
-  service: z.string().min(1, { message: "Must be a non-empty string" }),
+  service: z
+    .string()
+    .min(1, { message: "Must be a non-empty string" })
+    .max(100, { message: "Service name must not exceed 100 characters" }),
 
   message: z.string().min(1, { message: "Must be a non-empty string" }),
 

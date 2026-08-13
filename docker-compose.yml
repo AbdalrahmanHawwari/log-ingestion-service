@@ -4,10 +4,18 @@ services:
   log_db:
     image: postgres:16-alpine
     container_name: log_db
+    restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: log_service_db
+    command: >
+      postgres
+      -c shared_buffers=256MB
+      -c synchronous_commit=off
+      -c fsync=off
+      -c full_page_writes=off
+      -c max_connections=100
     ports:
       - "5432:5432"
     healthcheck:
@@ -28,6 +36,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: test_app
+    restart: always
     ports:
       - "8080:8080"
     environment:

@@ -1,5 +1,21 @@
 import { Request, Response } from "express";
 import { LogService } from "../services/logService";
+import { decodeCursor } from "../utils/cursor";
+
+function extractAttributes(
+  queryParams: Record<string, any>,
+): Record<string, string> {
+  const attributes: Record<string, string> = {};
+  for (const [key, value] of Object.entries(queryParams)) {
+    if (key.startsWith("attr.")) {
+      const attrKey = key.slice(5);
+      if (attrKey) {
+        attributes[attrKey] = String(value);
+      }
+    }
+  }
+  return attributes;
+}
 
 export class LogController {
   static async ingestLogs(req: Request, res: Response): Promise<void> {
@@ -90,29 +106,14 @@ export class LogController {
       }
 
       if (cursor) {
-        try {
-          const decoded = Buffer.from(cursor as string, "base64").toString(
-            "utf-8",
-          );
-          if (!decoded.includes("#")) {
-            res
-              .status(400)
-              .json({ error: "Invalid or malformed cursor format" });
-            return;
-          }
-        } catch (e) {
-          res.status(400).json({ error: "Invalid or malformed cursor" });
+        const decoded = decodeCursor(cursor as string);
+        if (!decoded) {
+          res.status(400).json({ error: "Invalid or malformed cursor format" });
           return;
         }
       }
 
-      const attributes: Record<string, string> = {};
-      for (const [key, value] of Object.entries(rest)) {
-        if (key.startsWith("attr.")) {
-          const attrKey = key.replace("attr.", "");
-          attributes[attrKey] = String(value);
-        }
-      }
+      const attributes = extractAttributes(rest);
 
       const result = await LogService.getLogs({
         service: service as string,
@@ -185,13 +186,7 @@ export class LogController {
         return;
       }
 
-      const attributes: Record<string, string> = {};
-      for (const [key, value] of Object.entries(rest)) {
-        if (key.startsWith("attr.")) {
-          const attrKey = key.replace("attr.", "");
-          attributes[attrKey] = String(value);
-        }
-      }
+      const attributes = extractAttributes(rest);
 
       const result = await LogService.aggregateLogs({
         since: since as string,

@@ -7,11 +7,11 @@ dotenv.config();
 
 const connectionString =
   process.env.DATABASE_URL ||
-  "postgres://Abdalrahman:postgres@localhost:5432/log_service_db";
+  "postgres://postgres:postgres@localhost:5432/log_service_db";
 
 export const pool = new Pool({
   connectionString,
-  max: 50,
+  max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
 });

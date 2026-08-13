@@ -3,34 +3,40 @@ import {
   serial,
   text,
   timestamp,
-  varchar,
   jsonb,
   index,
 } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
 
 export const logs = pgTable(
   "logs",
   {
     id: serial("id").primaryKey(),
-    timestamp: timestamp("timestamp", {
-      withTimezone: true,
-      mode: "string",
-    }).notNull(),
-    level: varchar("level", { length: 20 }).notNull(),
-    service: varchar("service", { length: 100 }).notNull(),
+    timestamp: timestamp("timestamp", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+    level: text("level").notNull(),
+    service: text("service").notNull(),
     message: text("message").notNull(),
-    attributes: jsonb("attributes").default(sql`'{}'::jsonb`),
+    attributes: jsonb("attributes").$type<Record<string, any>>(),
   },
   (table) => {
     return {
-      timestampIdIdx: index("logs_timestamp_id_idx").on(
+      timestampServiceIdx: index("idx_logs_timestamp_service").on(
         table.timestamp,
-        table.id,
+        table.service,
       ),
-      serviceIdx: index("logs_service_idx").on(table.service),
-      levelIdx: index("logs_level_idx").on(table.level),
-      attributesIdx: index("logs_attributes_idx").on(table.attributes),
+      timestampLevelIdx: index("idx_logs_timestamp_level").on(
+        table.timestamp,
+        table.level,
+      ),
+      compositeIdx: index("idx_logs_composite").on(
+        table.timestamp,
+        table.service,
+        table.level,
+      ),
     };
   },
 );
+
+export type Log = typeof logs.$inferSelect;
+export type NewLog = typeof logs.$inferInsert;
