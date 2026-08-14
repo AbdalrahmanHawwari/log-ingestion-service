@@ -11,7 +11,7 @@ const connectionString =
 
 export const pool = new Pool({
   connectionString,
-  max: 12, // تقليل القيمة لترك مساحة للمعالج للإنهاء السريع بدلاً من الـ Context Switching
+  max: 20, // تقليل القيمة لترك مساحة للمعالج للإنهاء السريع بدلاً من الـ Context Switching
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000, // زيادة مهلة انتظار الاتصال إلى 10 ثوانٍ لمنع الـ 500/Timeout Errors
 });

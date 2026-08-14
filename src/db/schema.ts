@@ -1,3 +1,4 @@
+// src/db/schema.ts
 import {
   pgTable,
   serial,
@@ -7,7 +8,6 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 
-// src/db/schema.ts
 export const logs = pgTable(
   "logs",
   {
@@ -22,11 +22,12 @@ export const logs = pgTable(
   },
   (table) => {
     return {
-      // فهرس بسيط خفيف جداً على timestamp فقط
-      timestampIdx: index("idx_logs_timestamp").on(table.timestamp),
+      // composite index يخدم التجميع والفلترة معاً بسرعة الخرق
+      idx_ts_service_level: index("idx_logs_ts_service_level").on(
+        table.timestamp,
+        table.service,
+        table.level,
+      ),
     };
   },
 );
-
-export type Log = typeof logs.$inferSelect;
-export type NewLog = typeof logs.$inferInsert;

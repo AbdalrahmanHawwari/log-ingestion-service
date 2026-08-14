@@ -204,16 +204,22 @@ export class LogService {
     else if (params.group_by === "level") groupColSql = "level";
 
     // استعلام مباشر مع فتح امكانية الـ Parallel Scan
+    // في استعلام الـ Aggregation
+    // داخل logService.ts -> aggregateLogs
     const query = `
-    SELECT 
-      to_char(date_bin('${intervalStr}'::interval, timestamp, TIMESTAMP '2000-01-01 00:00:00Z'), 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as start,
-      ${groupColSql} as group_val,
-      COUNT(*)::int as count
+  WITH filtered_logs AS (
+    SELECT timestamp, service, level
     FROM logs
     ${whereSql}
-    GROUP BY 1, 2
-    ORDER BY 1 ASC;
-  `;
+  )
+  SELECT 
+    to_char(date_bin('${intervalStr}'::interval, timestamp, TIMESTAMP '2000-01-01 00:00:00Z'), 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as start,
+    ${groupColSql} as group,
+    COUNT(*)::int as count
+  FROM filtered_logs
+  GROUP BY 1, 2
+  ORDER BY 1 ASC;
+`;
 
     // استخدام client منفصل أو التنفيذ المباشر
     const result = await pool.query(query, values);
@@ -226,6 +232,7 @@ export class LogService {
       })),
     };
   }
+
   static async cleanupExpiredLogs(retentionDays: number = 30): Promise<number> {
     const result = await pool.query(
       `DELETE FROM logs WHERE timestamp < NOW() - INTERVAL '1 day' * $1`,
