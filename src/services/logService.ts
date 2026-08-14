@@ -1,6 +1,6 @@
 import { pool, db } from "../db";
 import { logs } from "../db/schema";
-import { singleLogSchema, SingleLogInput } from "../validations/logSchema";
+import { singleLogSchema } from "../validations/logSchema";
 import { eq, and, gte, lt, ilike, sql, desc } from "drizzle-orm";
 import { decodeCursor, encodeCursor } from "../utils/cursor";
 
@@ -54,45 +54,58 @@ export class LogService {
     }
 
     const len = rawLogs.length;
-    const timestamps = new Array(len);
-    const levels = new Array(len);
-    const services = new Array(len);
-    const messages = new Array(len);
-    const attributesList = new Array(len);
-    const fallbackTime = new Date().toISOString();
+    const rejected: RejectedLog[] = [];
+
+    const validTimestamps: string[] = [];
+    const validLevels: string[] = [];
+    const validServices: string[] = [];
+    const validMessages: string[] = [];
+    const validAttributes: string[] = [];
 
     for (let i = 0; i < len; i++) {
-      const item = (rawLogs[i] as any) || {};
-      timestamps[i] = item.timestamp || fallbackTime;
-      levels[i] = item.level || "info";
-      services[i] = item.service || "unknown";
-      messages[i] = item.message || "";
-      attributesList[i] = item.attributes
-        ? JSON.stringify(item.attributes)
-        : "{}";
+      const parsed = singleLogSchema.safeParse(rawLogs[i]);
+      if (!parsed.success) {
+        const issue = parsed.error.issues[0];
+        rejected.push({
+          index: i,
+          reason: issue ? issue.message : "Invalid log entry format",
+        });
+        continue;
+      }
+
+      const log = parsed.data;
+      validTimestamps.push(log.timestamp);
+      validLevels.push(log.level);
+      validServices.push(log.service);
+      validMessages.push(log.message);
+      validAttributes.push(
+        log.attributes ? JSON.stringify(log.attributes) : "{}",
+      );
     }
 
-    const query = `
-      INSERT INTO logs (timestamp, level, service, message, attributes)
-      SELECT 
-        unnest($1::timestamptz[]),
-        unnest($2::text[]),
-        unnest($3::text[]),
-        unnest($4::text[]),
-        unnest($5::jsonb[])
-    `;
+    if (validTimestamps.length > 0) {
+      const query = `
+        INSERT INTO logs (timestamp, level, service, message, attributes)
+        SELECT 
+          unnest($1::timestamptz[]),
+          unnest($2::text[]),
+          unnest($3::text[]),
+          unnest($4::text[]),
+          unnest($5::jsonb[])
+      `;
 
-    await pool.query(query, [
-      timestamps,
-      levels,
-      services,
-      messages,
-      attributesList,
-    ]);
+      await pool.query(query, [
+        validTimestamps,
+        validLevels,
+        validServices,
+        validMessages,
+        validAttributes,
+      ]);
+    }
 
     return {
-      accepted: len,
-      rejected: [],
+      accepted: validTimestamps.length,
+      rejected,
     };
   }
 
@@ -153,10 +166,10 @@ export class LogService {
   static async aggregateLogs(
     params: AggregateQueryParams,
   ): Promise<{ buckets: AggregateBucket[] }> {
-    let interval = "1 minute";
-    if (params.bucket === "5m") interval = "5 minutes";
-    else if (params.bucket === "1h") interval = "1 hour";
-    else if (params.bucket === "1d") interval = "1 day";
+    let intervalStr = "1 minute";
+    if (params.bucket === "5m") intervalStr = "5 minutes";
+    else if (params.bucket === "1h") intervalStr = "1 hour";
+    else if (params.bucket === "1d") intervalStr = "1 day";
 
     const whereClauses: string[] = [];
     const values: any[] = [];
@@ -176,9 +189,15 @@ export class LogService {
       whereClauses.push(`service = $${paramIndex++}`);
       values.push(params.service);
     }
+
     if (params.level) {
       whereClauses.push(`level = $${paramIndex++}`);
       values.push(params.level);
+    }
+
+    if (params.q) {
+      whereClauses.push(`message ILIKE $${paramIndex++}`);
+      values.push(`%${params.q}%`);
     }
 
     const whereSql =
@@ -190,7 +209,7 @@ export class LogService {
 
     const query = `
       SELECT 
-        to_char(date_trunc('${params.bucket === "1m" ? "minute" : "hour"}', timestamp), 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as start,
+        to_char(date_bin('${intervalStr}'::interval, timestamp, TIMESTAMP '2000-01-01 00:00:00Z'), 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as start,
         ${groupColSql} as group_val,
         COUNT(*)::int as count
       FROM logs
@@ -211,25 +230,10 @@ export class LogService {
   }
 
   static async cleanupExpiredLogs(retentionDays: number = 30): Promise<number> {
-    let totalDeleted = 0;
-    const batchSize = 5000;
-
-    while (true) {
-      const result = await pool.query(
-        `DELETE FROM logs WHERE id IN (
-          SELECT id FROM logs 
-          WHERE timestamp < NOW() - INTERVAL '1 day' * $1 
-          LIMIT $2
-        )`,
-        [retentionDays, batchSize],
-      );
-
-      const deletedCount = result.rowCount || 0;
-      totalDeleted += deletedCount;
-
-      if (deletedCount < batchSize) break;
-    }
-
-    return totalDeleted;
+    const result = await pool.query(
+      `DELETE FROM logs WHERE timestamp < NOW() - INTERVAL '1 day' * $1`,
+      [retentionDays],
+    );
+    return result.rowCount || 0;
   }
 }
