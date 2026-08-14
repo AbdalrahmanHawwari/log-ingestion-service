@@ -13,16 +13,17 @@ services:
       postgres
       -c shared_buffers=256MB
       -c effective_cache_size=768MB
+      -c work_mem=32MB
       -c maintenance_work_mem=64MB
       -c checkpoint_completion_target=0.9
       -c wal_buffers=16MB
-      -c work_mem=16MB
       -c min_wal_size=1GB
       -c max_wal_size=4GB
-      -c max_connections=30
+      -c max_connections=20
       -c synchronous_commit=off
       -c fsync=off
       -c full_page_writes=off
+      -c max_parallel_workers_per_gather=2
     ports:
       - "5432:5432"
     healthcheck:
@@ -35,8 +36,6 @@ services:
         limits:
           cpus: "1.00"
           memory: 1000M
-    volumes:
-      - pgdata:/var/lib/postgresql/data
 
   app:
     build:

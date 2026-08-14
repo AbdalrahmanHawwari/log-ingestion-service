@@ -7,6 +7,7 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 
+// src/db/schema.ts
 export const logs = pgTable(
   "logs",
   {
@@ -21,15 +22,8 @@ export const logs = pgTable(
   },
   (table) => {
     return {
-      // فهرس واحد مركّب متسلسل يدعم جميع استعلامات الـ Ordering والـ Filtering الأساسية
-      logsTimestampIdx: index("idx_logs_timestamp_id").on(
-        table.timestamp,
-        table.id,
-      ),
-      logsServiceIdx: index("idx_logs_service_ts").on(
-        table.service,
-        table.timestamp,
-      ),
+      // فهرس بسيط خفيف جداً على timestamp فقط
+      timestampIdx: index("idx_logs_timestamp").on(table.timestamp),
     };
   },
 );
