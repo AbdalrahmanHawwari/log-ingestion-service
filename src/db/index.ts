@@ -11,9 +11,9 @@ const connectionString =
 
 export const pool = new Pool({
   connectionString,
-  max: 20,
+  max: 12, // تقليل القيمة لترك مساحة للمعالج للإنهاء السريع بدلاً من الـ Context Switching
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000, // زيادة مهلة انتظار الاتصال إلى 10 ثوانٍ لمنع الـ 500/Timeout Errors
 });
 
 export const db = drizzle(pool, { schema });

@@ -48,6 +48,7 @@ export interface AggregateBucket {
 }
 
 export class LogService {
+  // داخل logService.ts
   static async ingestBatch(rawLogs: unknown[]): Promise<IngestResult> {
     if (!Array.isArray(rawLogs) || rawLogs.length === 0) {
       return { accepted: 0, rejected: [] };
@@ -65,10 +66,9 @@ export class LogService {
     for (let i = 0; i < len; i++) {
       const parsed = singleLogSchema.safeParse(rawLogs[i]);
       if (!parsed.success) {
-        const issue = parsed.error.issues[0];
         rejected.push({
           index: i,
-          reason: issue ? issue.message : "Invalid log entry format",
+          reason: parsed.error.issues[0]?.message || "Invalid log format",
         });
         continue;
       }
@@ -84,23 +84,18 @@ export class LogService {
     }
 
     if (validTimestamps.length > 0) {
-      const query = `
-        INSERT INTO logs (timestamp, level, service, message, attributes)
-        SELECT 
-          unnest($1::timestamptz[]),
-          unnest($2::text[]),
-          unnest($3::text[]),
-          unnest($4::text[]),
-          unnest($5::jsonb[])
-      `;
-
-      await pool.query(query, [
-        validTimestamps,
-        validLevels,
-        validServices,
-        validMessages,
-        validAttributes,
-      ]);
+      // إدخال البيانات دفعة واحدة بـ unnest محسّن
+      await pool.query(
+        `INSERT INTO logs (timestamp, level, service, message, attributes)
+       SELECT * FROM UNNEST($1::timestamptz[], $2::text[], $3::text[], $4::text[], $5::jsonb[])`,
+        [
+          validTimestamps,
+          validLevels,
+          validServices,
+          validMessages,
+          validAttributes,
+        ],
+      );
     }
 
     return {
